@@ -4,6 +4,7 @@ import {User}  from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudnary.js"
 import {ApiResponse} from "../utils/apiresponse.js"
 import  Jwt from "jsonwebtoken"
+import mongoose from "mongoose";
 
 
 const generateAccessAndRefereshTokens = async(userId) =>{
@@ -227,6 +228,22 @@ const getCurrentUser = asyncHandler(async(req, res) => {
         "User fetched successfully"
     ))
 })
+const getuserById = asyncHandler(async (req, res, next) => {
+    const { userId } = req.params;
+  
+    if (!mongoose.isValidObjectId(userId)) {
+      return next(new ApiError(400, "Invalid user ID"));
+    }
+  
+    const user = await User.findById(userId);
+  
+    if (!user) {
+      return next(new ApiError(400, "user not found"));
+    }
+  
+    res.status(200).json(new ApiResponse(200, user, "user found successfully"));
+  });
+
 
 const updateaccountdetail = asyncHandler(async(req, res)=> {
     const {fullName, email} = req.body
@@ -311,16 +328,16 @@ const updateUsercoverimage =  asyncHandler(async(req, res) => {
 
 })
 const getUserChannelProfile = asyncHandler(async(req, res) => {
-    const {username} = req.params
+    const {username} = req.params;
 
     if (!username?.trim()) {
-        throw new ApiError(400, "username is missing")
+        throw new ApiError(400, "username is missing");
     }
 
     const channel = await User.aggregate([
         {
             $match: {
-                username: username?.toLowerCase()
+                username: username
             }
         },
         {
@@ -357,6 +374,21 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
             }
         },
         {
+            $lookup: {
+                from: "videos",
+                localField: "_id",
+                foreignField: "user", // Assuming the field name that stores the channel reference is 'user'
+                as: "uploadedVideos"
+            }
+        },
+        {
+            $addFields: {
+                uploadedVideosCount: {
+                    $size: "$uploadedVideos"
+                }
+            }
+        },
+        {
             $project: {
                 fullName: 1,
                 username: 1,
@@ -365,22 +397,19 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 isSubscribed: 1,
                 avatar: 1,
                 coverImage: 1,
-                email: 1
-
+                email: 1,
+                uploadedVideosCount: 1
             }
         }
-    ])
+    ]);
 
     if (!channel?.length) {
-        throw new ApiError(404, "channel does not exists")
+        throw new ApiError(404, "channel does not exist");
     }
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(200, channel[0], "User channel fetched successfully")
-    )
-})
+    return res.status(200).json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
+});
+
 
 const getWatchHistory = asyncHandler(async(req, res) => {
     const user = await User.aggregate([
@@ -451,7 +480,8 @@ const getWatchHistory = asyncHandler(async(req, res) => {
  updateUserAvatar,
  updateUsercoverimage,
  getWatchHistory,
- getUserChannelProfile
+ getUserChannelProfile,
+ getuserById
  
  }
  

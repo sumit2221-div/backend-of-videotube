@@ -4,6 +4,7 @@ import { Video } from "../models/video.model.js"
 import { ApiError } from "../utils/apierror.js"
 import { ApiResponse } from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
+import { Comment } from "../models/comment.model.js"
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
 
@@ -44,9 +45,39 @@ else{
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const {commentId} = req.params
-    //TODO: toggle like on comment
+    const userId = req.user._id
+    if(!commentId){
+     throw new ApiError(200, "invalid commentId")
+    }
+ 
+    const comment =  await Comment.findById(commentId)
+    if (!comment) {
+     throw new ApiError(404, "comment not found!");
+ }
+ const likedcomment = await Like.findOne({comment : commentId})
+ 
+ let like;
+ let unlike;
+ 
+ 
+ 
+ if(likedcomment){
+    unlike =  await Like.deleteOne({ comment: commentId });
+ }
+ else{
+      like = await Like.create({
+         comment : commentId,
+         likedby : userId
+     })
+ }
+  res.status(200).json(new ApiResponse(
+     200,
+     {},
+     `comment ${ unlike? "unlike" : "like"} successfully`
+ ));
+ });
+ 
 
-})
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const {tweetId} = req.params

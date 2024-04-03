@@ -9,54 +9,29 @@ import moment from "moment"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    const filter = {}
-    if(query) filter.title = {$regex :query, $options : 'i'}
-    if(userId) filter.owner = userId
+  const { query, sortBy, sortType, userId } = req.query;
+  const filter = {};
+  if (query) filter.title = { $regex: query, $options: 'i' };
+  if (userId) filter.owner = userId;
 
-    let sort = {}
+  let sort = {};
 
-    if(sortBy && sortType === 'asc') sort[sortBy] =1
-    if (sortBy && sortType === 'desc') sort[sortBy] = -1
-    if (!sortBy || !sortType) sort = {createdAt: -1}
+  if (sortBy && sortType === 'asc') sort[sortBy] = 1;
+  if (sortBy && sortType === 'desc') sort[sortBy] = -1;
+  if (!sortBy || !sortType) sort = { createdAt: -1 };
 
-    const totalvideos =  await Video.aggregate([
-      {
-        $match : filter
-      }, 
-      {
-        $count: "totalvideos"
-      }
-    ]).exec()
+  const videos = await Video.find(filter).sort(sort).exec();
 
-    const totalVideosCount = totalvideos.length > 0 ? totalvideos[0].totalVideos : 0
+  res.status(200).json(new ApiResponse(200, { videos }, "Videos found"));
+});
 
-    const videos = await Video.aggregate([
-        {
-            $match: filter
-        },
-        {
-            $sort: sort
-        },
-        {
-            $skip: limit * (page - 1)
-        },
-        {
-            $limit: limit
-        }
-    ]).exec()
-      res.status(200).json(new ApiResponse(200, {"videos": videos, "totalVideos": totalVideosCount}, "Videos found"))
-      
-
-
-})
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
     
 
     if(!title || ! description){
-        throw new ApiError(400,"provide title and thubnail both")
+        throw new ApiError(400,"provide title and description both")
 
 
     }
@@ -74,6 +49,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const videofile = await uploadOnCloudinary(videoLocalPath);
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
+    const ownerId = req.user._id;
+
   
 
 
@@ -81,7 +58,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         title,
         duration : moment.duration(videofile, 'seconds'),
       
-        owner : new mongoose.Types.ObjectId(req.user?._id),
+        owner : ownerId,
         description,
         thumbnail : thumbnail?.url || "",
         videofile : videofile.url
@@ -89,14 +66,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     })
 
-    const newVideo = await Video.findById(video._id).select("-owner");
+  
 
-    if (!newVideo) {
+    if (!video) {
       throw new ApiError(500, "something went wrong in publishing video");
     }
 
     return res.status(201).json(
-        new ApiResponse(200, newVideo,"video uploaded sucessfully")
+        new ApiResponse(200, video,"video uploaded sucessfully")
     )
 
     

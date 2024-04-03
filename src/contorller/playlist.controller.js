@@ -4,6 +4,7 @@ import {ApiError} from "../utils/apierror.js"
 import {ApiResponse} from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import { app } from "../app.js"
+import { Video } from "../models/video.model.js"
 
 
 const createPlaylist = asyncHandler(async (req, res) => {
@@ -30,12 +31,35 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const {userId} = req.params
-    //TODO: get user playlists
+    const userplaylist = await Playlist.find({owner : userId})
+    .populate('videos', 'title')
+    .exec()
+
+    if(userplaylist.length === 0){
+        throw new ApiError(400, "no playlist found")
+    }
+
+    res.status(200).json(new ApiResponse(200,{userplaylist}, "userplaylist retrive scuessfully"))
+      
 })
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
-    //TODO: get playlist by id
+
+    if(!isValidObjectId(playlistId)){
+        throw new ApiError(400, "invalid playlistId")
+    }
+
+    const playlist = await Playlist.findById(playlistId)
+
+    if(!playlist){
+        throw new ApiError(200, "playlist not found")
+    }
+
+    res.status(200).json(new ApiResponse(200,{playlist}, "playlist fetch sucessfully"))
+
+
+   
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
@@ -46,21 +70,25 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid videoid or playlistid")
     }
 
-    if (Playlist.videos.includes(videoId)) {
-        throw new ApiError(400, "Video is already in the playlist!");
-    }
+const video =  await Video.findById(videoId)
 
-    const addedvideo =  await Playlist.findByIdAndUpdate(playlistId,{
-        $push: {
-            video : videoId
-        }
-    })
+
+  
+
+    const addedvideo = await Playlist.findByIdAndUpdate(playlistId);
+
+    // Add the video details to the playlist
+    addedvideo.videos.push(video._id);
+    
+    // Save the updated playlist
+    await addedvideo.save();
+    
 
     if(!addedvideo){
         throw new ApiError(400, "something went wrong while adding video on playlist")
     }
 
-    res.status(200).json(new ApiResponse(200,{}, "video added sucessfully"))
+    res.status(200).json(new ApiResponse(200,{addedvideo}, "video added sucessfully"))
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
@@ -70,15 +98,17 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid videoid or playlistid")
     }
 
-    if (Playlist.videos.includes(videoId)) {
-        throw new ApiError(400, "Video is already in the playlist!");
-    }
+    const video =  await Video.findById(videoId)
 
-    const removedvideo =  await Playlist.findByIdAndUpdate(playlistId,{
-        $pull: {
-            video : videoId
-        }
-    })
+    
+
+    const removedvideo = await Playlist.findByIdAndUpdate(playlistId);
+
+
+    removedvideo.videos.pull(Video._id);
+    
+    await removedvideo.save();
+    
 
     if(!removedvideo){
         throw new ApiError(400, "something went wrong while removing video on playlist")
