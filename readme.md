@@ -1,3 +1,3 @@
 
 #backend 
-a backend of you tube
+a social media video sharing application with authentication  
