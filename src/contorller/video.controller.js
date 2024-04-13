@@ -9,7 +9,8 @@ import moment from "moment"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { query, sortBy, sortType, userId, page = 1, limit = 10 } = req.query;
+  const { query, sortBy, sortType, userId  } = req.query;
+  const {page = 1, limit = 10} = req.params
   const filter = {};
   if (query) filter.title = { $regex: query, $options: 'i' };
   if (userId) filter.owner = userId;
