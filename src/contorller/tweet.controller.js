@@ -1,49 +1,91 @@
 import mongoose, { isValidObjectId } from "mongoose"
-import {Tweet} from "../models/tweet.model.js"
+import { Tweet} from "../models/tweet.model.js"
 import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/apierror.js"
 import {ApiResponse} from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
+import { uploadOnCloudinary } from "../utils/cloudnary.js"
+
+const getAllTweets = asyncHandler(async (req, res) => {
+  const { query, sortBy, sortType, userId } = req.query;
+  let { page = 1, limit = 1 } = req.query; // Use req.query instead of req.params
+  page = parseInt(page); // Ensure page is a number
+
+  const filter = {};
+  if (query) filter.title = { $regex: query, $options: 'i' };
+  if (userId) filter.owner = userId;
+
+  let sort = {};
+  if (sortBy && sortType === 'asc') sort[sortBy] = 1;
+  if (sortBy && sortType === 'desc') sort[sortBy] = -1;
+  if (!sortBy || !sortType) sort = { createdAt: -1 };
+
+  const skip = (page - 1) * limit;
+
+  const tweets = await Tweet.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(parseInt(limit))
+    .exec();
+
+  const totaltweetCount = await Tweet.countDocuments(filter);
+  const totalPages = Math.ceil(totaltweetCount / limit);
+
+  res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "tweet found"));
+});
+
+
 
 const createTweet = asyncHandler(async (req, res) => {
-const {content}=  req.body
+    const { content } = req.body;
 
-if(!content){
-    throw new ApiError(400, "pls provide content")
-}
-
-
-
-const tweet =  await  Tweet.create({
-    content,
-    owner : new mongoose.Types.ObjectId(req.user?._id),
-
-
-})
-const newtweet = await Tweet.findById(tweet._id).select("-owner");
-
-    if (!newtweet) {
-      throw new ApiError(500, "something went wrong in uploading tweet");
+    if (!content) {
+      throw new ApiError(400, "Please provide content");
     }
 
-    return res.status(201).json(
-        new ApiResponse(200, newtweet,"tweet uploaded sucessfully")
-    )
+    if (!req.file || !req.file.path) {
+      throw new ApiError(400, "Please provide a picture");
+    }
 
-})
+    const pictureLocalPath = req.file.path;
+
+    // Upload picture to Cloudinary
+    const uploadResponse = await uploadOnCloudinary(pictureLocalPath);
+
+    // Extract the URL from the Cloudinary upload response
+    const pictureUrl = uploadResponse.secure_url;
+
+    // Create new tweet with the picture URL
+    const tweet = await Tweet.create({
+      content,
+      owner: req.user?._id,
+      picture: pictureUrl // Assign the picture URL
+    });
+
+
+    
+
+    return res.status(201).json(
+      new ApiResponse(200, tweet, "Tweet uploaded successfully")
+    );
+});
+
+
+
+  
 const getUserTweets = asyncHandler(async (req, res) => {
-    const {tweetId}= req.params
-    if (!mongoose.isValidObjectId(tweetId)) {
-        return next(new ApiError(400, "Invalid tweet ID"));
+    const {userId}= req.params
+    if (!mongoose.isValidObjectId(userId)) {
+        return next(new ApiError(400, "Invalid user ID"));
       }
     
-      const video = await Tweet.findById(tweetId);
+      const Tweet = await Tweet.find({owner : userId})
     
-      if (!video) {
-        return next(new ApiError(400, "Video not found"));
+      if (!Tweet) {
+        return next(new ApiError(400, "Tweet not found"));
       }
     
-      res.status(200).json(new ApiResponse(200, video, "Video retrieved successfully"));
+      res.status(200).json(new ApiResponse(200, Tweet, "tweet retrieved successfully"));
     });
 
 
@@ -82,5 +124,6 @@ export {
     createTweet,
     getUserTweets,
     updateTweet,
-    deleteTweet
+    deleteTweet,
+    getAllTweets
 }

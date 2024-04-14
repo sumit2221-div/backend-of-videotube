@@ -327,11 +327,11 @@ const updateUsercoverimage =  asyncHandler(async(req, res) => {
 
 
 })
-const getUserChannelProfile = asyncHandler(async(req, res) => {
-    const {username} = req.params;
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params;
 
     if (!username?.trim()) {
-        throw new ApiError(400, "username is missing");
+        throw new ApiError(400, "Username is missing");
     }
 
     const channel = await User.aggregate([
@@ -358,15 +358,11 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         },
         {
             $addFields: {
-                subscribersCount: {
-                    $size: "$subscribers"
-                },
-                channelsSubscribedToCount: {
-                    $size: "$subscribedTo"
-                },
+                subscribersCount: { $size: "$subscribers" },
+                channelsSubscribedToCount: { $size: "$subscribedTo" },
                 isSubscribed: {
                     $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -376,16 +372,14 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         {
             $lookup: {
                 from: "videos",
-                localField: "_id",
-                foreignField: "user", // Assuming the field name that stores the channel reference is 'user'
+                localField: "username",
+                foreignField: "User",
                 as: "uploadedVideos"
             }
         },
         {
             $addFields: {
-                uploadedVideosCount: {
-                    $size: "$uploadedVideos"
-                }
+                uploadedVideosCount: { $size: "$uploadedVideos" }
             }
         },
         {
@@ -398,74 +392,81 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 avatar: 1,
                 coverImage: 1,
                 email: 1,
-                uploadedVideosCount: 1
+                uploadedVideosCount: 1,
+                uploadedVideos: 1 // Include uploadedVideos field in the response
             }
         }
     ]);
 
     if (!channel?.length) {
-        throw new ApiError(404, "channel does not exist");
+        throw new ApiError(404, "Channel does not exist");
     }
+    
 
     return res.status(200).json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
 });
 
 
 const getWatchHistory = asyncHandler(async(req, res) => {
-    const user = await User.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(req.user?._id),
-            }
-        },
-        {
-            $lookup: {
-                from: "videos",
-                localField: "watchHistory",
-                foreignField: "_id",
-                as: "watchHistory",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullName: 1,
-                                        username: 1,
-                                        avatar: 1
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        $addFields:{
-                            owner:{
-                                $first: "$owner"
-                            }
-                        }
-                    }
-                ]
-            }
+    try {
+        // 1. Ensure req.user exists and has a valid _id
+        if (!req.user || !req.user._id) {
+            return res.status(400).json(new ApiResponse(400, null, "Invalid user"));
         }
-    ])
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            user[0].watchHistory,
-            "Watch history fetched successfully"
-        )
-    )
-})
+        // 2. Use aggregation pipeline to fetch user's watch history with video details
+        const user = await User.aggregate([
+            {
+                $match: {
+                    _id:  new mongoose.Types.ObjectId(req.user._id) // Use mongoose.Types.ObjectId directly
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "watchHistory",
+                    foreignField: "_id",
+                    as: "watchHistory"
+                }
+            },
+            {
+                $unwind: "$watchHistory" // Unwind watchHistory array if needed
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "watchHistory.owner",
+                    foreignField: "_id",
+                    as: "owner"
+                }
+            },
+            {
+                $addFields: {
+                    "watchHistory.owner": { $arrayElemAt: ["$owner", 0] } // Get the first element from owner array
+                }
+            },
+            {
+                $project: {
+                    "_id": 0, // Exclude _id field
+                    "watchHistory._id": 0, // Exclude _id field from nested watchHistory
+                    "owner": 0 // Exclude owner array
+                }
+            }
+        ]);
 
+        // 3. Check if user watch history is empty
+        if (!user || user.length === 0 || !user[0].watchHistory) {
+            return res.status(404).json(new ApiResponse(404, null, "Watch history not found"));
+        }
 
+        // 4. Return watch history with success response
+        return res.status(200).json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"));
+    } catch (error) {
+        // 5. Handle errors
+        console.error("Error fetching watch history:", error);
+        return res.status(500).json(new ApiResponse(500, null, "Internal server error"));
+    }
+});
 
 
 

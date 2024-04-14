@@ -6,39 +6,20 @@ import { ApiResponse } from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 const getVideoComments = asyncHandler(async (req, res) => {
     
-    const {videoId} = req.params
-    const {page = 1, limit = 10} = req.query
+    const { videoId } = req.params;
 
-    let comments =  await Comment.aggregate([
-        {
-            $match : {
-                videoId : videoId
-            }
-        },
-        {
-            $sort : {
-                createdAt: -1
-            }
-        },
-        {
-            $skip : limit * (page -1)
-        },
-        {
-            $limit : li4
-        }
-
-    ]).exec()
-
-    if(!comments.length > 0){
-        throw new ApiError(404, "no comment on this video")
+    const comments =  await Comment.find({ video : videoId });
+   
+  
+    
+    if (!comments.length > 0) {
+      throw new ApiError(404, "No comments found for this video.");
     }
-
-    const totalcomments =  (await Comment.countDocuments({videoId : videoId})).exec()
-
-    res.status(200).json(new ApiResponse(200, {"comments" : comments, "totalcomments" : totalcomments}, "comments fetch sucessfully"))
-
-})
-
+  
+    // Send a response with the retrieved comments
+    res.status(200).json(new ApiResponse(200, { comments }, "Comments fetched successfully."));
+  });
+  
 const addComment = asyncHandler(async (req, res) => {
     const {videoId} =  req.params
     const {content} = req.body
@@ -51,15 +32,15 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid videoId")
 
     }
-    const videos =  await Video.findById(videoId)
+    const video =  await Video.findById(videoId)
 
     const addedcomment = await Comment.create({
         content ,
-        video : videos,
+        video : video,
         owner : user
     })
     if(!addedcomment){
-        throw new ApiError(400, "something went wrong while adding the comment")
+        throw new ApiError(400,addedcomment, "something went wrong while adding the comment")
     }
 
     res.status(200).json(new ApiResponse(200, {addedcomment},"comment added sucessfully"))

@@ -9,14 +9,15 @@ import moment from "moment"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { query, sortBy, sortType, userId  } = req.query;
-  const {page = 1, limit = 10} = req.params
+  const { query, sortBy, sortType, userId } = req.query;
+  let { page = 1, limit = 12 } = req.query; // Use req.query instead of req.params
+  page = parseInt(page); // Ensure page is a number
+
   const filter = {};
   if (query) filter.title = { $regex: query, $options: 'i' };
   if (userId) filter.owner = userId;
 
   let sort = {};
-
   if (sortBy && sortType === 'asc') sort[sortBy] = 1;
   if (sortBy && sortType === 'desc') sort[sortBy] = -1;
   if (!sortBy || !sortType) sort = { createdAt: -1 };
@@ -30,11 +31,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
     .exec();
 
   const totalVideosCount = await Video.countDocuments(filter);
-
   const totalPages = Math.ceil(totalVideosCount / limit);
 
   res.status(200).json(new ApiResponse(200, { videos, totalPages }, "Videos found"));
 });
+
 
 
 const publishAVideo = asyncHandler(async (req, res) => {
