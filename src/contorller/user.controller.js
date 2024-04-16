@@ -372,7 +372,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "videos",
-                localField: "username",
+                localField: "_id",
                 foreignField: "User",
                 as: "uploadedVideos"
             }
@@ -393,7 +393,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 coverImage: 1,
                 email: 1,
                 uploadedVideosCount: 1,
-                uploadedVideos: 1 // Include uploadedVideos field in the response
+                uploadedVideos: 1 
             }
         }
     ]);
