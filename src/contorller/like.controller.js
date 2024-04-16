@@ -5,6 +5,8 @@ import { ApiError } from "../utils/apierror.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { Comment } from "../models/comment.model.js";
+import {Tweet} from "../models/tweet.model.js"
+
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
@@ -25,13 +27,13 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
     if (likedvideo) {
         unlike = await Like.deleteOne({ Video: videoId });
-        video.likes -= 1; // Decrement like count
+    
     } else {
         await Like.create({
             video: videoId,
             likedby: userId
         });
-        Video.likes += 1; // Increment like count
+        
     }
 
     await video.save();
@@ -44,16 +46,170 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
-    // Your existing toggleCommentLike function
+    const { commentId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.isValidObjectId(commentId)) {
+        throw new ApiError(400, "Invalid commentid");
+    }
+
+    const comment = await Comment.findById( commentId);
+    if (!comment) {
+        throw new ApiError(404, "comment not found!");
+    }
+
+    const likedcomment = await Like.findOne({ Comment: commentId });
+
+    let unlike;
+
+    if (likedcomment) {
+        unlike = await Like.deleteOne({ Comment: commentId });
+    
+    } else {
+        await Like.create({
+            comment : commentId,
+            likedby: userId
+        });
+        
+    }
+
+    await Comment.save();
+
+    res.status(200).json(new ApiResponse(
+        200,
+        {},
+        `comment ${unlike ? "unlike" : "like"} successfully`
+    ));
 });
 
+
 const toggleTweetLike = asyncHandler(async (req, res) => {
-    // Your existing toggleTweetLike function
+    const { tweetId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid tweetId");
+    }
+
+    const tweet = await Tweet.findById( tweetId);
+    if (!tweet) {
+        throw new ApiError(404, "tweet not found!");
+    }
+
+    const likedtweet = await Like.findOne({ Tweet :  tweetId });
+
+    let unlike;
+
+    if (likedtweet) {
+        unlike = await Like.deleteOne({ Tweet : tweetId});
+    
+    } else {
+        await Like.create({
+            tweet : tweetId,
+            likedby: userId
+        });
+        
+    }
+
+    await Comment.save();
+
+    res.status(200).json(new ApiResponse(
+        200,
+        {},
+        `tweet ${unlike ? "unlike" : "like"} successfully`
+    ));
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-    // Your existing getLikedVideos function
-});
+    const userId = req.user._id
+    
+
+    const videoPipeline =
+        [
+            {
+                $match: {
+                    likedBy: new mongoose.Types.ObjectId(userId),
+                },
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "video",
+                    foreignField: "_id",
+                    as: "video",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            username: 1,
+                                            avatar: "$avatar.url",
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            $addFields: {
+                                owner: {
+                                    $first: "$owner",
+                                },
+                            },
+                        },
+                        {
+                            $addFields: {
+                                videoFile: "$videoFile.url"
+                            },
+                        },
+                        {
+                            $addFields: {
+                                thumbnail: "$thumbnail.url"
+                            },
+                        },
+                    ],
+                },
+            },
+
+            {
+                $unwind: "$video"
+            },
+
+            {
+                $replaceRoot: {
+                    newRoot: "$video",
+                },
+            },
+        ]
+
+
+    try {
+        const likedVideos = await Like.aggregate(videoPipeline);
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    likedVideos,
+                    "liked videos fetched successfully"
+                )
+            )
+
+    } catch (error) {
+        console.error("getLikedVideos error ::", error);
+        throw new ApiError(500, error?.message || "Internal server error in getLikedVideos")
+    }
+
+})
+
+
+
+
+
 
 const getallLikes = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
