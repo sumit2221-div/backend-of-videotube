@@ -36,7 +36,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     if(!isValidObjectId(channelId)){
         throw new ApiError(400, "channelid invalid")
     }
-    const subscriber =  await Subscription.find({channel : channelId}).populate('subscriber', '_id username')
+    const subscriber =  await Subscription.find({channel : channelId}).populate('Subscriber', '_id username')
     res.status(200).json(new ApiResponse(200, subscriber , "subscriber retrive sucessfully"))
 })
 
