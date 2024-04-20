@@ -23,8 +23,8 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, null, 'Unsubscribed successfully'));
 } else {
     // If not subscribed, subscribe
-    await Subscription.create({ subscriber: userId, channel: channelId });
-    res.status(200).json(new ApiResponse(200, null, 'Subscribed successfully'));
+    const subscriberdata =  await Subscription.create({ subscriber: userId, channel: channelId });
+    res.status(200).json(new ApiResponse(200, subscriberdata, 'Subscribed successfully'));
 }
 
 
