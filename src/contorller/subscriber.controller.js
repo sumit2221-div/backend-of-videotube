@@ -7,40 +7,22 @@ import asyncHandler from "../utils/asyncHandler.js"
 
 
 const toggleSubscription = asyncHandler(async (req, res) => {
-    const { channelId } = req.params;
-    if (!isValidObjectId(channelId)) throw new ApiError(401, "Invalid channel Id");
-    if (!req.user?._id) throw new ApiError(401, "Unauthorized user");
-    const subscriberId = req.user?._id;
+    const {channelId} = req.params
 
-    const isSubscribed = await Subscription.findOne({ channel: channelId, subscriber: subscriberId });
-    var response;
-    try {
-        response = isSubscribed
-            ?
-            await Subscription.deleteOne({ channel: channelId, subscriber: subscriberId })
-            :
-            await Subscription.create({ channel: channelId, subscriber: subscriberId });
-    } catch (error) {
-        console.log("toggleSubscription error ::", error)
-        throw new ApiError(500, error?.message || "Internal server error in toggleSubscription")
-
+    if(!isValidObjectId(channelId)){
+        throw new ApiError(400, "channel id is not valid")
     }
 
-    return res.status(200)
-        .json(
-            new ApiResponse(
-                200,
-                response,
-                isSubscribed === null ? "Subscribed successfully" : "Unsubscribed successfully"
-
-            )
-        )
-
-
-
-
-})
-
+    const subscribe =  await  Subscription.findOne({ subscriber : req.user?._id, channel : channelId})
+    if(subscribe){
+        await Subscription.findByIdAndDelete(Subscription._id);
+        res.status(200).json(new ApiResponse(200, null, 'Unsubscribed successfully'));
+    } else {
+        // If not subscribed, subscribe
+        const subscriberdata =  await Subscription.create({ subscriber: req.user?._id, channel: channelId });
+        res.status(200).json(new ApiResponse(200, subscriberdata, 'Subscribed successfully'));
+    }
+});
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
