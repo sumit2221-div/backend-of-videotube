@@ -6,6 +6,7 @@ import {ApiResponse} from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudnary.js"
 import moment from "moment"
+import { Subscription } from "../models/subscription.modles.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -35,6 +36,21 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
   res.status(200).json(new ApiResponse(200, { videos, totalPages }, "Videos found"));
 });
+
+const Getsubscribervideos = asyncHandler(async(req,res)=>{
+  const userId = req.user._id
+  const subscriptios = await Subscription.find({ Subscriber : userId})
+
+  const channelIds = subscriptios.map(Subscription => Subscription.channel);
+  const videos = await Video.find({ owner: channelIds });
+
+  if(!videos){
+    throw new ApiError(400, "somwthing went wrong")
+  }
+
+  res.status(200).json(new ApiResponse(200, videos, "video find sucessfully"))
+
+})
 
 
 
@@ -169,5 +185,6 @@ export {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    Getsubscribervideos
 }

@@ -21,28 +21,17 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found!");
     }
 
-    const likedvideo = await Like.findOne({ Video: videoId });
-
-    let unlike;
+    const likedvideo = await Like.findOne({ video: videoId , likedby: userId });
 
     if (likedvideo) {
-        unlike = await Like.deleteOne({ Video: videoId });
-    
+        await Like.findByIdAndDelete(Like._id);
+        res.status(200).json(new ApiResponse(200, null, 'video dislike successfully'));
     } else {
-        await Like.create({
-            video: videoId,
-            likedby: userId
-        });
-        
+        // If not subscribed, subscribe
+        const Likedata = await Like.create({  video : videoId ,  likedBy: userId });
+      
+        res.status(200).json(new ApiResponse(200, Likedata, 'video Like successfully'));
     }
-
-    await video.save();
-
-    res.status(200).json(new ApiResponse(
-        200,
-        {},
-        `Video ${unlike ? "unlike" : "like"} successfully`
-    ));
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
@@ -122,107 +111,29 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-    const userId = req.user._id
-    
+    const userId = req.user?._id;
 
-    const videoPipeline =
-        [
-            {
-                $match: {
-                    likedBy: new mongoose.Types.ObjectId(userId),
-                },
-            },
-            {
-                $lookup: {
-                    from: "videos",
-                    localField: "video",
-                    foreignField: "_id",
-                    as: "video",
-                    pipeline: [
-                        {
-                            $lookup: {
-                                from: "users",
-                                localField: "owner",
-                                foreignField: "_id",
-                                as: "owner",
-                                pipeline: [
-                                    {
-                                        $project: {
-                                            fullName: 1,
-                                            username: 1,
-                                            avatar: "$avatar.url",
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        {
-                            $addFields: {
-                                owner: {
-                                    $first: "$owner",
-                                },
-                            },
-                        },
-                        {
-                            $addFields: {
-                                videoFile: "$videoFile.url"
-                            },
-                        },
-                        {
-                            $addFields: {
-                                thumbnail: "$thumbnail.url"
-                            },
-                        },
-                    ],
-                },
-            },
+    // Find all likes by the user
+    const userLikes = await Like.find({ likedBy: userId });
 
-            {
-                $unwind: "$video"
-            },
+    // Extract video IDs from user likes
+    const videoIds = userLikes.map(Like => Like.video);
 
-            {
-                $replaceRoot: {
-                    newRoot: "$video",
-                },
-            },
-        ]
-
-
-    try {
-        const likedVideos = await Like.aggregate(videoPipeline);
-        return res.status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    likedVideos,
-                    "liked videos fetched successfully"
-                )
-            )
-
-    } catch (error) {
-        console.error("getLikedVideos error ::", error);
-        throw new ApiError(500, error?.message || "Internal server error in getLikedVideos")
-    }
-
-})
+    // Find videos based on the extracted video IDs
+    const likedVideos = await Video.find({ _id:  videoIds});
 
 
 
-
-
-
-const getallLikes = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
-
-    // Count likes
-    const likeCount = await Like.countDocuments({ video: videoId, Like: true });
-
-    // Count dislikes
-    const dislikeCount = await Like.countDocuments({ video: videoId, Like : false });
-
-    res.status(200).json(new ApiResponse(200, { likes: likeCount, dislikes: dislikeCount }, "Likes and Dislikes found"));
+    res.status(200).json(new ApiResponse(
+        200,
+        { likedVideos},
+        "Liked videos retrieved successfully"
+    ));
 });
+
+
+
+
 
 
 
@@ -231,5 +142,5 @@ export {
     toggleTweetLike,
     toggleVideoLike,
     getLikedVideos,
-    getallLikes
+   
 };
