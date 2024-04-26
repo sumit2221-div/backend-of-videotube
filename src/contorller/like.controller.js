@@ -131,6 +131,27 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     ));
 });
 
+const getVideoAllLikes = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid videoId");
+    }
+
+    const video = await Video.findById(videoId);
+    if (!video) {
+        throw new ApiError(404, "Video not found!");
+    }
+
+    const allLikes = await Like.find({ video: videoId });
+
+    res.status(200).json(new ApiResponse(200, { allLikes }, "All likes for the video retrieved successfully"));
+});
+
+
+
+
+
 
 
 
@@ -142,5 +163,6 @@ export {
     toggleTweetLike,
     toggleVideoLike,
     getLikedVideos,
+    getVideoAllLikes
    
 };
