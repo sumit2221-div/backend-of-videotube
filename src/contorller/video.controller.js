@@ -134,8 +134,10 @@ const getVideoById = asyncHandler(async (req, res, next) => {
     }
     const likedByCurrentUser = await Like.findOne({ video: videoId, likedBy:userId });
     const likestatus =   likedByCurrentUser ? true : false;
+    const subscriber = await Subscription.findOne({ channel: video.owner, Subscriber: userId });
+    const isSubscriber = subscriber ? true : false;
   
-    res.status(200).json(new ApiResponse(200, {video, likestatus}, "Video retrieved successfully"));
+    res.status(200).json(new ApiResponse(200, {video, likestatus,isSubscriber}, "Video retrieved successfully"));
   });
 
 const updateVideo = asyncHandler(async (req, res) => {
