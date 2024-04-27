@@ -132,6 +132,13 @@ const getVideoById = asyncHandler(async (req, res, next) => {
       return next(new ApiError(400, "Video not found"));
     
     }
+    video.views += 1;
+
+    // Save the updated video data
+  
+
+  
+    await video.save();
     const likedByCurrentUser = await Like.findOne({ video: videoId, likedBy:userId });
     const likestatus =   likedByCurrentUser ? true : false;
     const subscriber = await Subscription.findOne({ channel: video.owner, Subscriber: userId });
