@@ -119,6 +119,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res, next) => {
     const { videoId } = req.params;
+     const userId = req.user._id
   
     if (!mongoose.isValidObjectId(videoId)) {
       return next(new ApiError(400, "Invalid video ID"));
@@ -128,9 +129,12 @@ const getVideoById = asyncHandler(async (req, res, next) => {
   
     if (!video) {
       return next(new ApiError(400, "Video not found"));
+    
     }
+    const likedByCurrentUser = await Like.findOne({ video: videoId, likedBy:userId });
+    const likestatus =   likedByCurrentUser ? true : false;
   
-    res.status(200).json(new ApiResponse(200, video, "Video retrieved successfully"));
+    res.status(200).json(new ApiResponse(200, {video, likestatus}, "Video retrieved successfully"));
   });
 
 const updateVideo = asyncHandler(async (req, res) => {
