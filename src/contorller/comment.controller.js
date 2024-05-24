@@ -4,6 +4,7 @@ import { Video } from "../models/video.model.js"
 import { ApiError } from "../utils/apierror.js"
 import { ApiResponse } from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
+import { User } from "../models/user.model.js"
 const getVideoComments = asyncHandler(async (req, res) => {
     
     const { videoId } = req.params;
@@ -90,7 +91,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     if (!comment) {
         throw new ApiError(404, "Comment not found!");
     }
-    if (comment.owner.toString() !== user) {
+    if (comment.owner.toString() !== User) {
         throw new ApiError(403, "You do not have permission to delete this comment!");
     }
 
