@@ -84,6 +84,8 @@ const updateComment = asyncHandler(async (req, res) => {
 const deleteComment = asyncHandler(async (req, res) => {
     const {commentId} = req.params
 
+    const user = req.user;
+
     if(!isValidObjectId(commentId)){
         throw new ApiError(400, "invalid commentId")
     }
@@ -91,7 +93,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     if (!comment) {
         throw new ApiError(404, "Comment not found!");
     }
-    if (comment.owner.toString() !== User) {
+    if (comment.owner.toString() !== user) {
         throw new ApiError(403, "You do not have permission to delete this comment!");
     }
 
