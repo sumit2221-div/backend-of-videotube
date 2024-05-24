@@ -84,7 +84,7 @@ const updateComment = asyncHandler(async (req, res) => {
 const deleteComment = asyncHandler(async (req, res) => {
     const {commentId} = req.params
 
-    const user = req.user;
+    const user = req.user._id;
 
     if(!isValidObjectId(commentId)){
         throw new ApiError(400, "invalid commentId")
