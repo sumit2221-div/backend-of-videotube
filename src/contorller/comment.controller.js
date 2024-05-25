@@ -83,7 +83,6 @@ const updateComment = asyncHandler(async (req, res) => {
 
 
 
-import { ApiError } from "./apierror.js";
 
 const deleteComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
