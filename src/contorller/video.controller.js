@@ -132,7 +132,7 @@ const getVideoById = asyncHandler(async (req, res, next) => {
       return next(new ApiError(400, "Video not found"));
     
     }
-    video.views += 1;
+    
 
     // Save the updated video data
   
