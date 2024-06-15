@@ -120,7 +120,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res, next) => {
     const { videoId } = req.params;
-     const userId = req.user._id
+    
   
     if (!mongoose.isValidObjectId(videoId)) {
       return next(new ApiError(400, "Invalid video ID"));
@@ -139,9 +139,10 @@ const getVideoById = asyncHandler(async (req, res, next) => {
 
   
     await video.save();
-    const likedByCurrentUser = await Like.findOne({ video: videoId, likedBy:userId });
-    const likestatus =   likedByCurrentUser ? true : false;
-    const subscriber = await Subscription.findOne({ channel: video.owner, Subscriber: userId });
+    const likedByCurrentUser = req.user ? await Like.findOne({ video: videoId, likedBy: req.user._id }) : null;
+    const likestatus = likedByCurrentUser ? true : false;
+
+    const subscriber = req.user ? await Subscription.findOne({ channel: video.owner, Subscriber: req.user._id }) : null;
     const isSubscriber = subscriber ? true : false;
   
     res.status(200).json(new ApiResponse(200, {video, likestatus,isSubscriber}, "Video retrieved successfully"));
