@@ -1,13 +1,28 @@
 import { Router } from 'express';
-import {createTweet,deleteTweet,updateTweet,getUserTweets, getAllTweets} from "../contorller/tweet.controller.js"
-import {verifyJWT} from "../middlewares/auth.middleware.js"
+import {
+    createTweet,
+    deleteTweet,
+    updateTweet,
+    getUserTweets,
+    getAllTweets
+} from "../contorller/tweet.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from '../middlewares/multer.middleware.js';
+
 const router = Router();
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
 
-router.route("/").get(getAllTweets)
-.post(upload.single("picture"),createTweet);
-router.route("/user/:userId").get(getUserTweets);
-router.route("/:tweetId").patch(updateTweet).delete(deleteTweet);
+router
+    .route("/")
+    .get(getAllTweets)
+    .post(verifyJWT, upload.single("picture"), createTweet); // Apply verifyJWT middleware to this route
 
- export default router
+router
+    .route("/user/:userId")
+    .get(getUserTweets); // No verifyJWT middleware for this route
+
+router
+    .route("/:tweetId")
+    .patch(verifyJWT, updateTweet) // Apply verifyJWT middleware to this route
+    .delete(verifyJWT, deleteTweet); // Apply verifyJWT middleware to this route
+
+export default router;
