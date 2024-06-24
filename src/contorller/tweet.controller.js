@@ -5,11 +5,12 @@ import {ApiError} from "../utils/apierror.js"
 import {ApiResponse} from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import { uploadOnCloudinary } from "../utils/cloudnary.js"
+import { Like } from "../models/like.model.js"
 
 const getAllTweets = asyncHandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
-  let { page = 1, limit = 10} = req.query; // Use req.query instead of req.params
-  page = parseInt(page); // Ensure page is a number
+  let { page = 1, limit = 10 } = req.query;
+  page = parseInt(page);
 
   const filter = {};
   if (query) filter.title = { $regex: query, $options: 'i' };
@@ -28,20 +29,27 @@ const getAllTweets = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .exec();
 
-  const totaltweetCount = await Tweet.countDocuments(filter);
-  const totalPages = Math.ceil(totaltweetCount / limit);
+  const totalTweetCount = await Tweet.countDocuments(filter);
+  const totalPages = Math.ceil(totalTweetCount / limit);
 
-  if(tweets.length == 0){
-    throw ApiError(400, "tweet not found")
+  if (tweets.length === 0) {
+    throw ApiError(400, "Tweets not found");
   }
-  const likedByCurrentUser = req.user ? await Like.findOne({ tweets : { $in: tweets.map(tweet => tweet._id) }, likedBy: req.user._id }).exec() : null;
-  const likestatus = likedByCurrentUser ? true : false;
 
+  const tweetIds = tweets.map(tweet => tweet._id);
+  const likes = req.user ? await Like.find({ tweet: { $in: tweetIds }, likedBy: req.user._id }).exec() : [];
+  const likedTweetIds = likes.map(like => like.tweet.toString());
 
-  res.status(200).json(new ApiResponse(200, { tweets, totalPages , likestatus}, "tweet found"));
+  const tweetsWithLikeStatus = tweets.map(tweet => {
+    const isLikedByCurrentUser = likedTweetIds.includes(tweet._id.toString());
+    return {
+      ...tweet._doc,
+      isLikedByCurrentUser
+    };
+  });
+
+  res.status(200).json(new ApiResponse(200, { tweets: tweetsWithLikeStatus, totalPages }, "Tweets found"));
 });
-
-
 
 const createTweet = asyncHandler(async (req, res) => {
     const { content } = req.body;
