@@ -34,7 +34,7 @@ const getAllTweets = asyncHandler(async (req, res) => {
   if(tweets.length == 0){
     throw ApiError(400, "tweet not found")
   }
-  const likedByCurrentUser = req.user ? await Like.findOne({ tweets : { $in: tweets.map(tweet => tweet._id) }, likedBy: req.user._id }) : null;
+  const likedByCurrentUser = req.user ? await Like.findOne({ tweets : { $in: tweets.map(tweet => tweet._id) }, likedBy: req.user._id }).exec() : null;
   const likestatus = likedByCurrentUser ? true : false;
 
 
