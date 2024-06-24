@@ -28,7 +28,7 @@ import errorHandler from "./utils/error.handle.js";
 
 app.use("/api/v1/users", userRouter)
 app.use("/api/v1/video", videoRouter)
-app.use("/api/v1/tweets", tweetRouter)
+app.use("/api/v1/tweet", tweetRouter)
 app.use("/api/v1/playlist", playlistRouter)
 app.use("/api/v1/like", likeRouter)
 app.use("/api/v1/comment", commentRouter)
