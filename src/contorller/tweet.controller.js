@@ -23,29 +23,39 @@ const getAllTweets = asyncHandler(async (req, res) => {
 
   const skip = (page - 1) * limit;
 
-  const tweets = await Tweet.find(filter)
-    .sort(sort)
-    .skip(skip)
-    .limit(parseInt(limit))
-    .exec();
+  try {
+    const tweets = await Tweet.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .exec();
 
-  const totalTweetCount = await Tweet.countDocuments(filter);
-  const totalPages = Math.ceil(totalTweetCount / limit);
+    const totalTweetCount = await Tweet.countDocuments(filter);
+    const totalPages = Math.ceil(totalTweetCount / limit);
 
-  if (tweets.length === 0) {
-    throw ApiError(400, "Tweets not found");
+    if (tweets.length === 0) {
+      throw ApiError(400, "Tweets not found");
+    }
+
+    const tweetIds = tweets.map(tweet => tweet._id);
+    const likes = req.user ? await Like.find({ tweet: { $in: tweetIds }, likedBy: req.user._id }).exec() : [];
+    const likedTweetIds = likes.map(like => like.tweet.toString());
+
+    const tweetsWithLikeStatus = tweets.map(tweet => {
+      const isLikedByCurrentUser = likedTweetIds.includes(tweet._id.toString());
+      return {
+        ...tweet._doc,
+        isLikedByCurrentUser
+      };
+    });
+
+    res.status(200).json(new ApiResponse(200, { tweets: tweetsWithLikeStatus, totalPages }, "Tweets found"));
+  } catch (error) {
+    console.error("Error fetching tweets:", error);
+    res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));
   }
-
-  const tweetIds = tweets.map(tweet => tweet._id);
-  const likes = req.user ? await Like.find({ tweet: { $in: tweetIds }, likedBy: req.user._id }).exec() : [];
-  const likestatus = likes ? true : false ; 
-
-
- 
-
-
-  res.status(200).json(new ApiResponse(200, { tweets , likestatus, totalPages }, "Tweets found"));
 });
+
 
 const createTweet = asyncHandler(async (req, res) => {
     const { content } = req.body;
