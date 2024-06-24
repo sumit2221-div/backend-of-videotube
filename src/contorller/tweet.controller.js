@@ -8,44 +8,40 @@ import { uploadOnCloudinary } from "../utils/cloudnary.js"
 
 const getAllTweets = asyncHandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
-  let { page = 1, limit = 10 } = req.query; 
-  page = parseInt(page); 
-  limit = parseInt(limit);
+  let { page = 1, limit = 10} = req.query; // Use req.query instead of req.params
+  page = parseInt(page); // Ensure page is a number
 
   const filter = {};
   if (query) filter.title = { $regex: query, $options: 'i' };
   if (userId) filter.owner = userId;
 
   let sort = {};
-  if (sortBy) {
-    sort[sortBy] = sortType === 'asc' ? 1 : -1;
-  } else {
-    sort = { createdAt: -1 };
-  }
+  if (sortBy && sortType === 'asc') sort[sortBy] = 1;
+  if (sortBy && sortType === 'desc') sort[sortBy] = -1;
+  if (!sortBy || !sortType) sort = { createdAt: -1 };
 
   const skip = (page - 1) * limit;
 
   const tweets = await Tweet.find(filter)
     .sort(sort)
     .skip(skip)
-    .limit(limit)
+    .limit(parseInt(limit))
     .exec();
 
-  const totalTweetCount = await Tweet.countDocuments(filter);
-  const totalPages = Math.ceil(totalTweetCount / limit);
+  const totaltweetCount = await Tweet.countDocuments(filter);
+  const totalPages = Math.ceil(totaltweetCount / limit);
 
-  if (tweets.length === 0) {
-    return res.status(404).json(new ApiResponse(404, null, "No tweets found"));
+  if(tweets.length == 0){
+    throw ApiError(400, "tweet not found")
   }
+  const likedByCurrentUser = req.user ? await Like.findOne({ tweets : { $in: tweets.map(tweet => tweet._id) }, likedBy: req.user._id }) : null;
+  const likestatus = likedByCurrentUser ? true : false;
 
-  let likestatus = false;
-  if (req.user) {
-    const likedTweets = await Like.find({ tweet: { $in: tweets.map(tweet => tweet._id) }, likedBy: req.user._id }).exec();
-    likestatus = likedTweets.length > 0;
-  }
 
-  res.status(200).json(new ApiResponse(200, { tweets, totalPages, likestatus }, "Tweets found"));
+  res.status(200).json(new ApiResponse(200, { tweets, totalPages , likestatus}, "tweet found"));
 });
+
+
 
 const createTweet = asyncHandler(async (req, res) => {
     const { content } = req.body;
