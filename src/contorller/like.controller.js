@@ -101,7 +101,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         
     }
 
-    await Tweet.save();
+
 
     res.status(200).json(new ApiResponse(
         200,
