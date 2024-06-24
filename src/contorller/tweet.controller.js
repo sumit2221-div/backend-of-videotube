@@ -8,7 +8,7 @@ import { uploadOnCloudinary } from "../utils/cloudnary.js"
 
 const getAllTweets = asyncHandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
-  let { page = 1, limit = 1 } = req.query; // Use req.query instead of req.params
+  let { page = 1, limit = 10} = req.query; // Use req.query instead of req.params
   page = parseInt(page); // Ensure page is a number
 
   const filter = {};
@@ -30,6 +30,10 @@ const getAllTweets = asyncHandler(async (req, res) => {
 
   const totaltweetCount = await Tweet.countDocuments(filter);
   const totalPages = Math.ceil(totaltweetCount / limit);
+
+  if(tweets.length == 0){
+    throw ApiError(400, "tweet not found")
+  }
 
   res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "tweet found"));
 });
