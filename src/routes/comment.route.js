@@ -13,8 +13,8 @@ const router = Router();
 
 
 
-router.route("/:videoId").get(getVideoComments).post(verifyJWT,addComment);
+router.route("/v/:videoId").get(getVideoComments).post(verifyJWT,addComment);
 router.route("/c/:commentId").delete(verifyJWT,deleteComment).patch(verifyJWT,updateComment);
-router.route("/:TweetId").get(getTweetComments).post(verifyJWT, Tweetcomment)
+router.route("/t/:TweetId").get(getTweetComments).post(verifyJWT, Tweetcomment)
 
 export default router
