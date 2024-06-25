@@ -50,7 +50,7 @@ const addComment = asyncHandler(async (req, res) => {
 })
 
 const Tweetcomment = asyncHandler(async (req, res)=> {
-    const {TweetId} = req.param;
+    const {TweetId} = req.params;
     const {content} = req.body;
     const user = req.user._id;
 
