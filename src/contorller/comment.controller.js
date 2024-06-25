@@ -5,6 +5,7 @@ import { ApiError } from "../utils/apierror.js"
 import { ApiResponse } from "../utils/apiresponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js"
+import { Tweet } from "../models/tweet.model.js"
 const getVideoComments = asyncHandler(async (req, res) => {
     
     const { videoId } = req.params;
@@ -47,6 +48,48 @@ const addComment = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, {addedcomment},"comment added sucessfully"))
 
 })
+
+const Tweetcomment = asyncHandler(async (req, res)=> {
+    const {TweetId} = req.param;
+    const {content} = req.body;
+    const user = req.user._id;
+
+    if(!content){
+        throw new ApiError(400, "content is required to post a comment")
+    }
+    if(!isValidObjectId(TweetId)){
+        throw new ApiError(401, "invalid tweet!")
+
+    }
+    const tweet = await Tweet.findById(TweetId)
+
+    const addedcomment = await Tweet.create({
+        content,
+        Tweet : tweet,
+        owner : user
+    })
+    if(!addedcomment){
+        throw new ApiError(400, "something went wrong while adding this comment")
+    }
+
+    res.status(200).json(new ApiResponse(200, {addedcomment}," comment added sucessfully"))
+})
+
+const getTweetComments = asyncHandler(async (req, res) => {
+    
+    const { commentId} = req.params;
+
+    const comments =  await Comment.find({ Tweet : commentId});
+   
+  
+    
+    if (!comments.length > 0) {
+      throw new ApiError(404, "No comments found for this tweet.");
+    }
+  
+    // Send a response with the retrieved comments
+    res.status(200).json(new ApiResponse(200, { comments }, "Comments fetched successfully."));
+  });
 
 const updateComment = asyncHandler(async (req, res) => {
     const {commentId}= req.params
@@ -118,5 +161,7 @@ export {
     getVideoComments, 
     addComment, 
     updateComment,
-     deleteComment
+     deleteComment,
+     Tweetcomment,
+     getTweetComments
     }

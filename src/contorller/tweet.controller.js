@@ -37,19 +37,9 @@ const getAllTweets = asyncHandler(async (req, res) => {
       throw ApiError(400, "Tweets not found");
     }
 
-    const tweetIds = tweets.map(tweet => tweet._id);
-    const likes = req.user ? await Like.find({ tweet: { $in: tweetIds }, likedBy: req.user._id }).exec() : [];
-    const likedTweetIds = likes.map(like => like.tweet.toString());
+   
 
-    const tweetsWithLikeStatus = tweets.map(tweet => {
-      const isLikedByCurrentUser = likedTweetIds.includes(tweet._id.toString());
-      return {
-        ...tweet._doc,
-        isLikedByCurrentUser
-      };
-    });
-
-    res.status(200).json(new ApiResponse(200, { tweets: tweetsWithLikeStatus, totalPages }, "Tweets found"));
+    res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "Tweets found"));
   } catch (error) {
     console.error("Error fetching tweets:", error);
     res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));

@@ -3,7 +3,9 @@ import {
     addComment,
     getVideoComments,
     deleteComment,
-    updateComment
+    updateComment,
+    Tweetcomment,
+    getTweetComments
 } from "../contorller/comment.controller.js"
 import {verifyJWT} from "../middlewares/auth.middleware.js"
 
@@ -13,5 +15,6 @@ const router = Router();
 
 router.route("/:videoId").get(getVideoComments).post(verifyJWT,addComment);
 router.route("/c/:commentId").delete(verifyJWT,deleteComment).patch(verifyJWT,updateComment);
+router.route("/:TweetId").get(getTweetComments).post(verifyJWT, Tweetcomment)
 
 export default router
