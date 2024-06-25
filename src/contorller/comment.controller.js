@@ -62,6 +62,9 @@ const Tweetcomment = asyncHandler(async (req, res)=> {
 
     }
     const tweet = await Tweet.findById(TweetId)
+    if(!tweet){
+        throw new ApiError(400, "tweet not found")
+    }
 
     const addedcomment = await Tweet.create({
         content,

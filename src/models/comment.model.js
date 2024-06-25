@@ -17,7 +17,8 @@ const commentSchema = new Schema(
         },
         tweet : {
             type : Schema.Types.ObjectId,
-            ref : "Tweet"
+            ref : "Tweet",
+            required : true
         }
     },
     {
