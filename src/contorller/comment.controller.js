@@ -77,9 +77,9 @@ const Tweetcomment = asyncHandler(async (req, res)=> {
 
 const getTweetComments = asyncHandler(async (req, res) => {
     
-    const { commentId} = req.params;
+    const { TweetId} = req.params;
 
-    const comments =  await Comment.find({ Tweet : commentId});
+    const comments =  await Comment.find({ Tweet : TweetId});
    
   
     
