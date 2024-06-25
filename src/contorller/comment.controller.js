@@ -68,7 +68,7 @@ const Tweetcomment = asyncHandler(async (req, res)=> {
 
     const addedcomment = await Tweet.create({
         content,
-        Tweet : tweet,
+        Tweet : TweetId,
         owner : user
     })
     if(!addedcomment){
