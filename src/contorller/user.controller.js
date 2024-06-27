@@ -378,7 +378,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         $lookup: {
           from: "videos",
           localField: "_id",
-          foreignField: "User",
+          foreignField: "owner",
           as: "uploadedVideos"
         }
       },
@@ -406,6 +406,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     if (!channel.length) {
       throw new ApiError(404, "Channel does not exist");
     }
+
   
     return res.status(200).json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
   });
