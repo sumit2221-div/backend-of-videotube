@@ -36,10 +36,13 @@ const getAllTweets = asyncHandler(async (req, res) => {
     if (tweets.length === 0) {
       throw ApiError(400, "Tweets not found");
     }
+    const updatedTweet = await Tweet.findById(tweetId).populate('likes');
+    const likedByCurrentUser = updatedTweet.likes.some(like => like.likedby.toString() === userId.toString());
+    const likeCount = updatedTweet.likes.length;
 
    
 
-    res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "Tweets found"));
+    res.status(200).json(new ApiResponse(200, {likedByCurrentUser, likeCount, tweets, totalPages }, "Tweets found"));
   } catch (error) {
     console.error("Error fetching tweets:", error);
     res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));

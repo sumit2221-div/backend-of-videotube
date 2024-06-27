@@ -101,13 +101,10 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         unlike = false;
     }
 
-    const updatedTweet = await Tweet.findById(tweetId).populate('likes');
-    const likedByCurrentUser = updatedTweet.likes.some(like => like.likedby.toString() === userId.toString());
-    const likeCount = updatedTweet.likes.length;
+   
 
     res.status(200).json({
-        likedByCurrentUser,
-        likeCount,
+        
         message: `Tweet ${unlike ? "unliked" : "liked"} successfully`
     });
 });
