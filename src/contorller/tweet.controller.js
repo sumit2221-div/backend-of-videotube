@@ -11,7 +11,6 @@ const getAllTweets = asyncHandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
   let { page = 1, limit = 10 } = req.query;
   page = parseInt(page);
-  limit = parseInt(limit);
 
   const filter = {};
   if (query) filter.title = { $regex: query, $options: 'i' };
@@ -28,28 +27,19 @@ const getAllTweets = asyncHandler(async (req, res) => {
     const tweets = await Tweet.find(filter)
       .sort(sort)
       .skip(skip)
-      .limit(limit)
-      .populate('likes')
+      .limit(parseInt(limit))
       .exec();
 
     const totalTweetCount = await Tweet.countDocuments(filter);
     const totalPages = Math.ceil(totalTweetCount / limit);
 
     if (tweets.length === 0) {
-      throw new ApiError(400, "Tweets not found");
+      throw ApiError(400, "Tweets not found");
     }
 
-    const updatedTweets = tweets.map(tweet => {
-      const likedByCurrentUser = tweet.likes.some(like => like.likedby.toString() === userId);
-      const likeCount = tweet.likes.length;
-      return {
-        ...tweet.toObject(),
-        likedByCurrentUser,
-        likeCount
-      };
-    });
+   
 
-    res.status(200).json(new ApiResponse(200, { tweets: updatedTweets, totalPages }, "Tweets found"));
+    res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "Tweets found"));
   } catch (error) {
     console.error("Error fetching tweets:", error);
     res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));
