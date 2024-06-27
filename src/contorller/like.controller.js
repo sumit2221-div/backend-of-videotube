@@ -81,34 +81,37 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid tweetId");
     }
 
-    const tweet = await Tweet.findById( tweetId);
+    const tweet = await Tweet.findById(tweetId);
     if (!tweet) {
-        throw new ApiError(404, "tweet not found!");
+        throw new ApiError(404, "Tweet not found!");
     }
 
-    const likedtweet = await Like.findOne({ Tweet :  tweetId });
+    const likedTweet = await Like.findOne({ tweet: tweetId, likedby: userId });
 
     let unlike;
 
-    if (likedtweet) {
-        unlike = await Like.deleteOne({ Tweet : tweetId});
-    
+    if (likedTweet) {
+        await Like.deleteOne({ tweet: tweetId, likedby: userId });
+        unlike = true;
     } else {
         await Like.create({
-            tweet : tweetId,
+            tweet: tweetId,
             likedby: userId
         });
-        
+        unlike = false;
     }
 
+    const updatedTweet = await Tweet.findById(tweetId).populate('likes');
+    const likedByCurrentUser = updatedTweet.likes.some(like => like.likedby.toString() === userId.toString());
+    const likeCount = updatedTweet.likes.length;
 
-
-    res.status(200).json(new ApiResponse(
-        200,
-        {},
-        `tweet ${unlike ? "unlike" : "like"} successfully`
-    ));
+    res.status(200).json({
+        likedByCurrentUser,
+        likeCount,
+        message: `Tweet ${unlike ? "unliked" : "liked"} successfully`
+    });
 });
+
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
