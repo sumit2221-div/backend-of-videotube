@@ -1,170 +1,139 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {Playlist} from "../models/playlist.model.js"
-import {ApiError} from "../utils/apierror.js"
-import {ApiResponse} from "../utils/apiresponse.js"
-import asyncHandler from "../utils/asyncHandler.js"
-import { app } from "../app.js"
-import { Video } from "../models/video.model.js"
-
+import mongoose, { isValidObjectId } from "mongoose";
+import { Playlist } from "../models/playlist.model.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import { Video } from "../models/video.model.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
-    const {name, description} = req.body
+  const { name, description } = req.body;
+  const userId = req.user._id;
 
-    const userId =  req.user._id;
+  const newPlaylist = await Playlist.create({
+    name,
+    description,
+    owner: userId,
+  });
 
-    const newplaylist = await Playlist.create({
+  if (!newPlaylist) {
+    return res.status(500).json({ message: "Something went wrong while creating the playlist" });
+  }
 
-        name,
-        description,
-        owner : userId
-
-    })
-
-    if(!newplaylist){
-        throw new ApiError(500, "something went wrong while creating playlist")
-    }
-
-    res.status(200).json(new ApiResponse(200,{newplaylist}, "playlist created sucessfully"))
-
-    
-})
+  res.status(201).json({ data: newPlaylist, message: "Playlist created successfully" });
+});
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-    const {userId} = req.params
-    const userplaylist = await Playlist.find({owner : userId})
-    .populate('videos', 'title')
-    .exec()
+  const { userId } = req.params;
 
-    if(userplaylist.length === 0){
-        throw new ApiError(400, "no playlist found")
-    }
+  const userPlaylists = await Playlist.find({ owner: userId })
+    .populate("videos", "title")
+    .exec();
 
-    res.status(200).json(new ApiResponse(200,{userplaylist}, "userplaylist retrive scuessfully"))
-      
-})
+  if (userPlaylists.length === 0) {
+    return res.status(404).json({ message: "No playlists found" });
+  }
+
+  res.status(200).json({ data: userPlaylists, message: "User playlists retrieved successfully" });
+});
 
 const getPlaylistById = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
+  const { playlistId } = req.params;
 
-    if(!isValidObjectId(playlistId)){
-        throw new ApiError(400, "invalid playlistId")
-    }
+  if (!isValidObjectId(playlistId)) {
+    return res.status(400).json({ message: "Invalid playlist ID" });
+  }
 
-    const playlist = await Playlist.findById(playlistId)
+  const playlist = await Playlist.findById(playlistId);
 
-    if(!playlist){
-        throw new ApiError(200, "playlist not found")
-    }
+  if (!playlist) {
+    return res.status(404).json({ message: "Playlist not found" });
+  }
 
-    res.status(200).json(new ApiResponse(200,{playlist}, "playlist fetch sucessfully"))
-
-
-   
-})
+  res.status(200).json({ data: playlist, message: "Playlist retrieved successfully" });
+});
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params
+  const { playlistId, videoId } = req.params;
 
+  if (!playlistId || !videoId) {
+    return res.status(400).json({ message: "Invalid video ID or playlist ID" });
+  }
 
-    if(!playlistId || !videoId){
-        throw new ApiError(400, "invalid videoid or playlistid")
-    }
+  const video = await Video.findById(videoId);
+  if (!video) {
+    return res.status(404).json({ message: "Video not found" });
+  }
 
-const video =  await Video.findById(videoId)
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    return res.status(404).json({ message: "Playlist not found" });
+  }
 
+  playlist.videos.push(video._id);
+  await playlist.save();
 
-  
-
-    const addedvideo = await Playlist.findByIdAndUpdate(playlistId);
-
-    // Add the video details to the playlist
-    addedvideo.videos.push(video._id);
-    
-    // Save the updated playlist
-    await addedvideo.save();
-    
-
-    if(!addedvideo){
-        throw new ApiError(400, "something went wrong while adding video on playlist")
-    }
-
-    res.status(200).json(new ApiResponse(200,{addedvideo}, "video added sucessfully"))
-})
+  res.status(200).json({ data: playlist, message: "Video added to playlist successfully" });
+});
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params
+  const { playlistId, videoId } = req.params;
 
-    if(!playlistId || !videoId){
-        throw new ApiError(400, "invalid videoid or playlistid")
-    }
+  if (!playlistId || !videoId) {
+    return res.status(400).json({ message: "Invalid video ID or playlist ID" });
+  }
 
-    const video =  await Video.findById(videoId)
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    return res.status(404).json({ message: "Playlist not found" });
+  }
 
-    
+  playlist.videos.pull(videoId);
+  await playlist.save();
 
-    const removedvideo = await Playlist.findByIdAndUpdate(playlistId);
-
-
-    removedvideo.videos.pull(Video._id);
-    
-    await removedvideo.save();
-    
-
-    if(!removedvideo){
-        throw new ApiError(400, "something went wrong while removing video on playlist")
-    }
-
-    res.status(200).json(new ApiResponse(200,{}, "video removed sucessfully"))
-})
-
-
+  res.status(200).json({ message: "Video removed from playlist successfully" });
+});
 
 const deletePlaylist = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
-    if(!isValidObjectId(playlistId)){
-        throw new ApiError(400, "invalid playlist id")
-    }
+  const { playlistId } = req.params;
 
-    const deletePlay = await Playlist.findByIdAndDelete(playlistId);
+  if (!isValidObjectId(playlistId)) {
+    return res.status(400).json({ message: "Invalid playlist ID" });
+  }
 
-    if(!deletePlay){
-        throw new ApiError(400, "something went wrong while deleting this playlist")
-    }
+  const deletedPlaylist = await Playlist.findByIdAndDelete(playlistId);
 
-    res.status(200).json(200, {deletePlay}, "playlist deleted sucessfully")
+  if (!deletedPlaylist) {
+    return res.status(404).json({ message: "Something went wrong while deleting the playlist" });
+  }
 
-})
+  res.status(200).json({ message: "Playlist deleted successfully" });
+});
 
 const updatePlaylist = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
-    const {name, description} = req.body
-    
+  const { playlistId } = req.params;
+  const { name, description } = req.body;
 
-    if (!isValidObjectId(playlistId)) {
-        throw new ApiError(400, "Invalid playlistId!");
-    }
+  if (!isValidObjectId(playlistId)) {
+    return res.status(400).json({ message: "Invalid playlist ID" });
+  }
 
-    const updatedplaylist = await Playlist.findByIdAndUpdate(playlistId, {
-      $set: {
-            name,
-            description
-        }
-      })
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    { name, description },
+    { new: true }
+  );
 
-      if(!updatedplaylist){
-        throw new ApiError(400, "something went wrong while updating playlist")
+  if (!updatedPlaylist) {
+    return res.status(404).json({ message: "Something went wrong while updating the playlist" });
+  }
 
-      }
-
-      res.status(200).json(200, {},"playlist updated sucessfully")
-})
+  res.status(200).json({ data: updatedPlaylist, message: "Playlist updated successfully" });
+});
 
 export {
-    createPlaylist,
-    getUserPlaylists,
-    getPlaylistById,
-    addVideoToPlaylist,
-    removeVideoFromPlaylist,
-    deletePlaylist,
-    updatePlaylist
-}
+  createPlaylist,
+  getUserPlaylists,
+  getPlaylistById,
+  addVideoToPlaylist,
+  removeVideoFromPlaylist,
+  deletePlaylist,
+  updatePlaylist,
+};

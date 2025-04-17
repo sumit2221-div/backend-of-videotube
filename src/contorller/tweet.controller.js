@@ -1,11 +1,9 @@
-import mongoose, { isValidObjectId } from "mongoose"
-import { Tweet} from "../models/tweet.model.js"
-import {User} from "../models/user.model.js"
-import {ApiError} from "../utils/apierror.js"
-import {ApiResponse} from "../utils/apiresponse.js"
-import asyncHandler from "../utils/asyncHandler.js"
-import { uploadOnCloudinary } from "../utils/cloudnary.js"
-import { Like } from "../models/like.model.js"
+import mongoose from "mongoose";
+import { Tweet } from "../models/tweet.model.js";
+import { User } from "../models/user.model.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudnary.js";
+import { Like } from "../models/like.model.js";
 
 const getAllTweets = asyncHandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
@@ -13,128 +11,106 @@ const getAllTweets = asyncHandler(async (req, res) => {
   page = parseInt(page);
 
   const filter = {};
-  if (query) filter.title = { $regex: query, $options: 'i' };
+  if (query) filter.title = { $regex: query, $options: "i" };
   if (userId) filter.owner = userId;
 
   let sort = {};
-  if (sortBy && sortType === 'asc') sort[sortBy] = 1;
-  if (sortBy && sortType === 'desc') sort[sortBy] = -1;
+  if (sortBy && sortType === "asc") sort[sortBy] = 1;
+  if (sortBy && sortType === "desc") sort[sortBy] = -1;
   if (!sortBy || !sortType) sort = { createdAt: -1 };
 
   const skip = (page - 1) * limit;
 
   try {
-    const tweets = await Tweet.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .exec();
-
+    const tweets = await Tweet.find(filter).sort(sort).skip(skip).limit(parseInt(limit)).exec();
     const totalTweetCount = await Tweet.countDocuments(filter);
     const totalPages = Math.ceil(totalTweetCount / limit);
 
     if (tweets.length === 0) {
-      throw ApiError(400, "Tweets not found");
+      return res.status(404).json({ message: "No tweets found" });
     }
 
-   
-
-    res.status(200).json(new ApiResponse(200, { tweets, totalPages }, "Tweets found"));
+    res.status(200).json({ data: { tweets, totalPages }, message: "Tweets retrieved successfully" });
   } catch (error) {
     console.error("Error fetching tweets:", error);
-    res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-
 const createTweet = asyncHandler(async (req, res) => {
-    const { content } = req.body;
+  const { content } = req.body;
 
-    if (!content) {
-      throw new ApiError(400, "Please provide content");
-    }
+  if (!content) {
+    return res.status(400).json({ message: "Please provide content" });
+  }
 
-    if (!req.file || !req.file.path) {
-      throw new ApiError(400, "Please provide a picture");
-    }
+  if (!req.file || !req.file.path) {
+    return res.status(400).json({ message: "Please provide a picture" });
+  }
 
-    const pictureLocalPath = req.file.path;
+  const pictureLocalPath = req.file.path;
 
-    // Upload picture to Cloudinary
-    const uploadResponse = await uploadOnCloudinary(pictureLocalPath);
+  // Upload picture to Cloudinary
+  const uploadResponse = await uploadOnCloudinary(pictureLocalPath);
 
-    // Extract the URL from the Cloudinary upload response
-    const pictureUrl = uploadResponse.secure_url;
+  // Extract the URL from the Cloudinary upload response
+  const pictureUrl = uploadResponse.secure_url;
 
-    // Create new tweet with the picture URL
-    const tweet = await Tweet.create({
-      content,
-      owner: req.user?._id,
-      picture: pictureUrl // Assign the picture URL
-    });
+  // Create new tweet with the picture URL
+  const tweet = await Tweet.create({
+    content,
+    owner: req.user?._id,
+    picture: pictureUrl, // Assign the picture URL
+  });
 
-
-    
-
-    return res.status(201).json(
-      new ApiResponse(200, tweet, "Tweet uploaded successfully")
-    );
+  res.status(201).json({ data: tweet, message: "Tweet uploaded successfully" });
 });
 
-
-
-  
 const getUserTweets = asyncHandler(async (req, res) => {
-    const {userId}= req.params
-    if (!mongoose.isValidObjectId(userId)) {
-        return next(new ApiError(400, "Invalid user ID"));
-      }
-    
-      const Tweet = await Tweet.find({owner : userId})
-    
-      if (!Tweet) {
-        return next(new ApiError(400, "Tweet not found"));
-      }
-    
-      res.status(200).json(new ApiResponse(200, Tweet, "tweet retrieved successfully"));
-    });
+  const { userId } = req.params;
 
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
 
+  const tweets = await Tweet.find({ owner: userId });
+
+  if (!tweets || tweets.length === 0) {
+    return res.status(404).json({ message: "No tweets found for this user" });
+  }
+
+  res.status(200).json({ data: tweets, message: "Tweets retrieved successfully" });
+});
 
 const updateTweet = asyncHandler(async (req, res) => {
-    const {tweetId}= req.params
-    const {tweet} = req.body
+  const { tweetId } = req.params;
+  const { content } = req.body;
 
-    const update =  await Tweet.findOneAndUpdate(tweetId,{tweet}, {new :true})
+  const updatedTweet = await Tweet.findByIdAndUpdate(tweetId, { content }, { new: true });
 
-    if(!update){
-        throw new ApiError(400,"uable to update")
-    }
+  if (!updatedTweet) {
+    return res.status(404).json({ message: "Unable to update tweet" });
+  }
 
-    res.status(200).json(new ApiResponse(200, "tweet updated sucessfully"))
-})
+  res.status(200).json({ data: updatedTweet, message: "Tweet updated successfully" });
+});
 
 const deleteTweet = asyncHandler(async (req, res) => {
-    const {tweetId}= req.params
+  const { tweetId } = req.params;
 
-    const deletetweet = await Tweet.findByIdAndDelete(tweetId)
+  const deletedTweet = await Tweet.findByIdAndDelete(tweetId);
 
-    if(!deletetweet){
-        throw new ApiError(200, "error while deleting this tweet")
-    }
+  if (!deletedTweet) {
+    return res.status(404).json({ message: "Error while deleting the tweet" });
+  }
 
-    res.status(200).json(new ApiResponse(200, "tweet deleted sucessfully"))
-    
-
-
-    
-    
-})
+  res.status(200).json({ message: "Tweet deleted successfully" });
+});
 
 export {
-    createTweet,
-    getUserTweets,
-    updateTweet,
-    deleteTweet,
-    getAllTweets
-}
+  createTweet,
+  getUserTweets,
+  updateTweet,
+  deleteTweet,
+  getAllTweets,
+};

@@ -1,64 +1,56 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {User} from "../models/user.model.js"
-import { Subscription} from "../models/subscription.modles.js"
-import {ApiError} from "../utils/apierror.js"
-import { ApiResponse } from "../utils/apiresponse.js"
-import asyncHandler from "../utils/asyncHandler.js"
-
+import mongoose, { isValidObjectId } from "mongoose";
+import { Subscription } from "../models/subscription.modles.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const toggleSubscription = asyncHandler(async (req, res) => {
-    const {channelId} = req.params;
+  const { channelId } = req.params;
 
-    if (!isValidObjectId(channelId)) {
-        throw new ApiError(400, "Channel ID is not valid");
-    }
+  if (!isValidObjectId(channelId)) {
+    return res.status(400).json({ message: "Channel ID is not valid" });
+  }
 
-    const subscriberId = req.user?._id;
+  const subscriberId = req.user?._id;
 
-    let subscription = await Subscription.findOne({  Subscriber: subscriberId, channel: channelId })
-                                       
+  let subscription = await Subscription.findOne({ Subscriber: subscriberId, channel: channelId });
 
-    if (subscription) {
-        await Subscription.findByIdAndDelete(subscription._id);
-        res.status(200).json(new ApiResponse(200, null, 'Unsubscribed successfully'));
-    } else {
-        // If not subscribed, subscribe
-        const subscriberData = await Subscription.create({  Subscriber: subscriberId, channel: channelId });
-      
-        res.status(200).json(new ApiResponse(200, subscriberData, 'Subscribed successfully'));
-    }
-    
-    
+  if (subscription) {
+    await Subscription.findByIdAndDelete(subscription._id);
+    return res.status(200).json({ message: "Unsubscribed successfully" });
+  } else {
+    // If not subscribed, subscribe
+    const subscriberData = await Subscription.create({ Subscriber: subscriberId, channel: channelId });
+    return res.status(200).json({ data: subscriberData, message: "Subscribed successfully" });
+  }
 });
 
-  
-
-// controller to return subscriber list of a channel
+// Controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
-    const {channelId} = req.params
+  const { channelId } = req.params;
 
-    if(!isValidObjectId(channelId)){
-        throw new ApiError(400, "channelid invalid")
-    }
-    const subscriber =  await Subscription.find({channel : channelId}).populate('Subscriber', '_id username')
-    res.status(200).json(new ApiResponse(200, subscriber , "subscriber retrive sucessfully"))
-})
+  if (!isValidObjectId(channelId)) {
+    return res.status(400).json({ message: "Invalid channel ID" });
+  }
 
-// controller to return channel list to which user has subscribed
+  const subscribers = await Subscription.find({ channel: channelId }).populate('Subscriber', '_id username');
+
+  return res.status(200).json({ data: subscribers, message: "Subscribers retrieved successfully" });
+});
+
+// Controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-    const { subscriberId } = req.params
+  const { subscriberId } = req.params;
 
-    if(!isValidObjectId(subscriberId)){
-        throw new ApiError(400, "invalid subscriberId")
-    }
-    const Subscribed = await Subscription.find({Subscriber : subscriberId}).populate('channel', '_id name')
-    res.status(200).json(new ApiResponse(200, Subscribed, "subscriber find sucessfully"))
+  if (!isValidObjectId(subscriberId)) {
+    return res.status(400).json({ message: "Invalid subscriber ID" });
+  }
 
-})
+  const subscribedChannels = await Subscription.find({ Subscriber: subscriberId }).populate('channel', '_id name');
 
+  return res.status(200).json({ data: subscribedChannels, message: "Subscribed channels retrieved successfully" });
+});
 
 export {
-    toggleSubscription,
-    getUserChannelSubscribers,
-    getSubscribedChannels
-}
+  toggleSubscription,
+  getUserChannelSubscribers,
+  getSubscribedChannels,
+};
