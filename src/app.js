@@ -22,7 +22,7 @@ import playlistRouter from "./routes/playlist.router.js";
 import likeRouter from "./routes/like.router.js";
 import commentRouter from "./routes/comment.route.js";
 import subscriberRoute from "./routes/subscription.route.js"
-import errorHandler from "./utils/error.handle.js";
+
 
 
 
@@ -34,7 +34,7 @@ app.use("/api/v1/like", likeRouter)
 app.use("/api/v1/comment", commentRouter)
 app.use("/api/v1/subscription", subscriberRoute)
 
-app.use(errorHandler);
+
 
 
 export {app}
