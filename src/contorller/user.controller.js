@@ -2,6 +2,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudnary.js";
+import { Video } from "../models/video.model.js";
+import { Subscription } from "../models/subscription.modles.js"
 
 import Jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -202,6 +204,40 @@ const getuserById = asyncHandler(async (req, res, next) => {
   res.status(200).json({ data: user, message: "User found successfully" });
 });
 
+const getUserChannelDetails = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // Validate user ID
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  // Fetch user details
+  const user = await User.findById(userId).select("-password -refreshToken");
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  // Fetch uploaded videos by the user
+  const uploadedVideos = await Video.find({ owner: userId }).sort({ createdAt: -1 });
+
+  // Fetch subscribers of the user's channel
+  const subscribers = await Subscription.find({ channel: userId }).populate("Subscriber", "_id username avatar");
+
+  // Fetch channels the user has subscribed to
+  const subscriptions = await Subscription.find({ Subscriber: userId }).populate("channel", "_id username avatar");
+
+  // Prepare the response
+  const channelDetails = {
+    user,
+    uploadedVideos,
+    subscribers: subscribers.map((sub) => sub.Subscriber),
+    subscriptions: subscriptions.map((sub) => sub.channel),
+  };
+
+  return res.status(200).json({ data: channelDetails, message: "Channel details retrieved successfully" });
+});
+
 export {
   RegisterUser,
   LoginUser,
@@ -210,4 +246,5 @@ export {
   changecurrentpassword,
   getCurrentUser,
   getuserById,
+  getUserChannelDetails,
 };

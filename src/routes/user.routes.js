@@ -5,6 +5,7 @@ import   {RegisterUser,
     refreshAcessToken,
     changecurrentpassword,
     getCurrentUser,
+    getUserChannelDetails,
 
  
  
@@ -37,6 +38,7 @@ router.route("/change-password").post(verifyJWT, changecurrentpassword)
 router.route("/current-user").get(verifyJWT, getCurrentUser)
 
 router.route("/:userId").get( getuserById)
+router.route("/c/:userId").get(verifyJWT, getUserChannelDetails)
 
 
 
